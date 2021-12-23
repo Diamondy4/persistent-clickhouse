@@ -45,41 +45,30 @@ dependencies:
 
 library:
   source-dirs: src
-
-executables:
-  persistent-clickhouse-exe:
-    main: Main.hs
-    source-dirs: app
-    ghc-options:
-      - -threaded
-      - -rtsopts
-      - -with-rtsopts=-N
-    default-extensions:
-      - OverloadedStrings
-      - TypeOperators
-      - TypeApplications
-      - TypeFamilies
-      - DataKinds
-      - FunctionalDependencies
-      - LambdaCase
-      - NamedFieldPuns
-      - ViewPatterns
-      - PatternSynonyms
-      - GADTs
-      - DeriveGeneric
-      - DeriveAnyClass
-      - DerivingStrategies
-      - GeneralizedNewtypeDeriving
-      - OverloadedLabels
-      - OverloadedStrings
-      - OverloadedLists
-      - BangPatterns
-      - DuplicateRecordFields
-      - PolyKinds
-      - FlexibleContexts
-      - FlexibleInstances
-    dependencies:
-      - persistent-clickhouse
+  default-extensions:
+  - OverloadedStrings
+  - TypeOperators
+  - TypeApplications
+  - TypeFamilies
+  - DataKinds
+  - FunctionalDependencies
+  - LambdaCase
+  - NamedFieldPuns
+  - ViewPatterns
+  - PatternSynonyms
+  - GADTs
+  - DeriveGeneric
+  - DeriveAnyClass
+  - DerivingStrategies
+  - GeneralizedNewtypeDeriving
+  - OverloadedLabels
+  - OverloadedStrings
+  - OverloadedLists
+  - BangPatterns
+  - DuplicateRecordFields
+  - PolyKinds
+  - FlexibleContexts
+  - FlexibleInstances
 
 tests:
   persistent-clickhouse-test:
