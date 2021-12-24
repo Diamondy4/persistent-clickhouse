@@ -13,6 +13,7 @@ import Data.Char (ord)
 import Data.Csv
 import qualified Data.Csv as CSV
 import Data.Time
+import Data.Time.Zones.All (fromTZName, tzByName)
 import Data.UUID
 import Data.Vector (Vector)
 import qualified Data.Vector as V
@@ -23,7 +24,6 @@ import Debug.Trace
 import GHC.Int
 import GHC.Word
 import Network.HTTP.Req (Scheme (Http), defaultHttpConfig, runReq)
-import Data.Time.Zones.All (fromTZName, tzByName)
 
 -- | ClickHouse use tab-separated csv.
 decOpts :: DecodeOptions
@@ -35,22 +35,21 @@ decOpts =
 decodeToClickhouseType :: ByteString -> (Vector LBS.ByteString, Vector (Vector ClickhouseType))
 decodeToClickhouseType bs =
   traceShow bs $
-  case decoded of
-    Left s -> error "Failed to decode"
-    Right vec -> do
-      -- First result rows are column names and types must exist.
-      if V.length vec < 2
-        then error "Failed to decode"
-        else
-          let colNames = vec V.! 0
-              colTypes = vec V.! 1
-              colData = V.map (V.map LBS.toStrict) . V.drop 2 $ vec
-              converters = V.map (bsToClickhouseType . LBS.toStrict) colTypes
-              convertedData = V.map (V.zipWith ($) converters) colData
-           in (colNames, convertedData)
+    case decoded of
+      Left s -> error "Failed to decode"
+      Right vec -> do
+        -- First result rows are column names and types must exist.
+        if V.length vec < 2
+          then error "Failed to decode"
+          else
+            let colNames = vec V.! 0
+                colTypes = vec V.! 1
+                colData = V.map (V.map LBS.toStrict) . V.drop 2 $ vec
+                converters = V.map (bsToClickhouseType . LBS.toStrict) colTypes
+                convertedData = V.map (V.zipWith ($) converters) colData
+             in (colNames, convertedData)
   where
     decoded = decodeWith decOpts NoHeader (LBS.fromStrict bs)
-
 
 bsDropEnd :: Int -> ByteString -> ByteString
 bsDropEnd n xs = BS.take (BS.length xs - n) xs
@@ -90,7 +89,6 @@ readDateTimeUTC bs = ClickDateTime $ parseTimeOrError @UTCTime True defaultTimeL
     -- like "2021-12-03 15:03:45.302880179"
     format = "%Y-%0m-%0d %H:%M:%S%Q"
 
-
 readIntColumn :: ByteString -> ByteString -> ClickhouseType
 readIntColumn "Int8" bs = ClickInt8 . read @Int8 $ C8.unpack bs
 readIntColumn "Int16" bs = ClickInt16 . read @Int16 $ C8.unpack bs
@@ -118,4 +116,4 @@ bsToClickhouseType spec
   | "UInt" `isPrefixOf` spec = readIntColumn spec
   | "UUID" `isPrefixOf` spec = readUUID
   | "Float" `isPrefixOf` spec = readFloatColumn spec
-  | otherwise = error ("Unknown Type: " ++ C8.unpack spec)
+  | otherwise = error ("Unknown Type (please implement conversion from bytestring to ClickhouseType): " ++ C8.unpack spec)

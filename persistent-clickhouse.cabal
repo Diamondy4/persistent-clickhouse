@@ -65,6 +65,7 @@ library
     , base >=4.7 && <5
     , bytestring
     , cassava
+    , cereal
     , clickhouse-driver
     , conduit
     , containers
@@ -98,6 +99,7 @@ test-suite persistent-clickhouse-test
     , base >=4.7 && <5
     , bytestring
     , cassava
+    , cereal
     , clickhouse-driver
     , conduit
     , containers

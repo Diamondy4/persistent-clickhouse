@@ -97,7 +97,8 @@ insertSql' ent vals =
     EntityIdNaturalKey _ ->
       ISRManyKeys sql vals
     EntityIdField _ ->
-      ISRInsertGet sql "SELECT LAST_INSERT_ID()"
+      error "Generated ID column not supported, please specify primary key"
+      --ISRInsertGet sql "SELECT LAST_INSERT_ID()"
   where
     (fieldNames, placeholders) = unzip (Util.mkInsertPlaceholders ent escapeFT)
     sql =

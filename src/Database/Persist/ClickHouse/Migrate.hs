@@ -37,7 +37,7 @@ type WithClickhouseEnvT m a = ReaderT ClickhouseEnv m a
 type WithClickhouseEnv a = Reader ClickhouseEnv a
 
 data SchemaStatus = Matched | Unmatched [Sql]
-  deriving (Show)
+  deriving (Show, Eq)
 
 type SafeToRemove = Bool
 
@@ -118,10 +118,10 @@ addTable :: [Column] -> EntityDef -> AlterDB
 addTable cols entity =
   AddTable
     [fmt|\
-CREATE TABLE {dbTableName}
-( {primaryKeyTxt} {T.intercalate "," $ map showColumn nonIdCols} )
-ENGINE = MergeTree
-|]
+    CREATE TABLE {dbTableName}
+    ( {primaryKeyTxt} {T.intercalate "," $ map showColumn nonIdCols} )
+    ENGINE = MergeTree
+    |]
   where
     dbTableName = T.pack (escapeE $ getEntityDBName entity)
     nonIdCols =
@@ -137,7 +137,7 @@ ENGINE = MergeTree
         EntityIdNaturalKey pdef ->
           let definedPrimKeyTxt = T.intercalate "," $ T.pack . escapeF . fieldDB <$> NEL.toList (compositeFields pdef)
            in [fmt|PRIMARY KEY ( {definedPrimKeyTxt} ),|]
-        EntityIdField field -> error "Surrogate keys not supported. Please defined primary key fields."
+        EntityIdField field -> error "Surrogate keys not supported. Please define primary key fields."
 
 safeToRemove :: EntityDef -> FieldNameDB -> Bool
 safeToRemove def (FieldNameDB colName) =
@@ -274,7 +274,7 @@ chMkColumns :: [EntityDef] -> EntityDef -> [Column]
 chMkColumns allDefs t = let (columns, _, _) = mkColumns allDefs t emptyBackendSpecificOverrides in columns
 
 showColumn :: Column -> Text
-showColumn (Column n isNull sqlType' def gen _defConstraintName _maxLen _ref) =
+showColumn (Column !n !isNull !sqlType' def gen _ _maxLen _ref) =
   [fmt|\
 {colName} {colType} {colDefault}
   |]
@@ -283,12 +283,12 @@ showColumn (Column n isNull sqlType' def gen _defConstraintName _maxLen _ref) =
     colBaseType = showSqlType sqlType'
     colType :: Text =
       if isNull
-        then "Nullable(" <> colType <> ")"
+        then [fmt|Nullable( {colBaseType} )|]
         else colBaseType
-    colDefault =
+    colDefault :: Text =
       case def of
         Nothing -> ""
-        Just s -> " DEFAULT " <> s
+        Just s -> [fmt|DEFAULT {s}|]
 
 -- | Persistent sql builder's SqlType to Clickhouse type (as in clickhouse)
 showSqlType :: SqlType -> Text

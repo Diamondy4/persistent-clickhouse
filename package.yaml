@@ -41,6 +41,7 @@ dependencies:
   - PyF
   - pretty-simple 
   - aeson
+  - cereal
   - newtype
 
 library:
