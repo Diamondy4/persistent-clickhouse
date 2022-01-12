@@ -54,7 +54,7 @@ import Database.Persist.ClickHouse.Internal.Backend
 prepare' ::
   (ClickhouseClient client) =>
   ClickhouseClientSettings client ->
-  ClickhouseEnv ->
+  ClickhouseConnectionSettings ->
   Text ->
   IO Statement
 prepare' settings connection sql = do
@@ -75,7 +75,7 @@ executeWithPersistValue ::
     Functor f
   ) =>
   ClickhouseClientSettings client ->
-  ClickhouseEnv ->
+  ClickhouseConnectionSettings ->
   RenderQueryType renderer ->
   f PersistValue ->
   IO ByteString
@@ -94,7 +94,7 @@ execute' ::
     Functor f
   ) =>
   ClickhouseClientSettings client ->
-  ClickhouseEnv ->
+  ClickhouseConnectionSettings ->
   RenderQueryType renderer ->
   f PersistValue ->
   IO Int64
@@ -118,7 +118,7 @@ withStmt' ::
     Functor f
   ) =>
   ClickhouseClientSettings client ->
-  ClickhouseEnv ->
+  ClickhouseConnectionSettings ->
   RenderQueryType renderer ->
   f PersistValue ->
   Acquire (ConduitT () [PersistValue] m ())
@@ -140,17 +140,17 @@ insertSqlBackend' ent vals =
 {- withClickHouse ::
   (MonadUnliftIO m, MonadLoggerIO m, ClickhouseClient client) =>
   ClickhouseClientSettings client ->
-  ClickhouseEnv ->
+  ClickhouseConnectionSettings ->
   (SqlBackend -> m a) ->
   m a
 withClickHouse settings env = withSqlConn toOpen
   where
-    toOpen = openClickhouseEnv settings env
+    toOpen = openClickhouseConnectionSettings settings env
 
 runClickhouse ::
   (MonadUnliftIO m, ClickhouseClient client) =>
   ClickhouseClientSettings client ->
-  ClickhouseEnv ->
+  ClickhouseConnectionSettings ->
   -- | database action
   ReaderT SqlBackend (NoLoggingT (ResourceT m)) a ->
   m a
@@ -160,14 +160,14 @@ runClickhouse settings env =
     . withClickHouse settings env
     . runSqlConn -}
 
-{- openClickhouseEnv ::
+{- openClickhouseConnectionSettings ::
   forall connectionType.
   (ClickhouseClient connectionType) =>
   ClickhouseClientSettings connectionType ->
-  ClickhouseEnv ->
+  ClickhouseConnectionSettings ->
   LogFunc ->
   IO SqlBackend
-openClickhouseEnv settings env@ClickhouseEnv {..} logFunc = do
+openClickhouseConnectionSettings settings env@ClickhouseConnectionSettings {..} logFunc = do
   smap <- newIORef Map.empty
   return $
     mkSqlBackend

@@ -50,7 +50,7 @@ import Optics.Generic
 import PyF
 
 data ClickhouseBackend connectionType = ClickhouseBackend
-  { env :: !ClickhouseEnv,
+  { env :: !ClickhouseConnectionSettings,
     settings :: !(ClickhouseClientSettings connectionType),
     stmtMap :: !(IORef (Map Text Statement)),
     logFunc :: !LogFunc
@@ -164,14 +164,14 @@ instance (ClickhouseClient connectionType) => PersistQueryRead (ClickhouseBacken
   count f = withBaseBackend $ count f
   exists f = withBaseBackend $ exists f
 
-openClickhouseEnv ::
+openClickhouseConnectionSettings ::
   forall connectionType.
   (ClickhouseClient connectionType) =>
   ClickhouseClientSettings connectionType ->
-  ClickhouseEnv ->
+  ClickhouseConnectionSettings ->
   LogFunc ->
   IO (ClickhouseBackend connectionType)
-openClickhouseEnv settings env logFunc = do
+openClickhouseConnectionSettings settings env logFunc = do
   stmtMap <- newIORef Map.empty
   return $
     ClickhouseBackend
@@ -198,17 +198,17 @@ withClickhouseConn open f = do
 withClickHouse ::
   (MonadUnliftIO m, MonadLoggerIO m, ClickhouseClient client) =>
   ClickhouseClientSettings client ->
-  ClickhouseEnv ->
+  ClickhouseConnectionSettings ->
   (ClickhouseBackend client -> m a) ->
   m a
 withClickHouse settings env = withClickhouseConn toOpen
   where
-    toOpen = openClickhouseEnv settings env
+    toOpen = openClickhouseConnectionSettings settings env
 
 runClickhouse ::
   (MonadUnliftIO m, ClickhouseClient client) =>
   ClickhouseClientSettings client ->
-  ClickhouseEnv ->
+  ClickhouseConnectionSettings ->
   -- | database action
   ReaderT (ClickhouseBackend client) (NoLoggingT (ResourceT m)) a ->
   m a
