@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Database.Persist.ClickHouse.PersistField where
+module Database.Persist.ClickHouse.Internal.PersistFieldInstances where
 
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Text as T
