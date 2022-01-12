@@ -34,9 +34,9 @@ import Optics (Magnify (magnify), Zoom (zoom), (%), (&), (<&>), (^.))
 import Optics.Generic
 import PyF
 
-type WithClickhouseEnvT m a = ReaderT ClickhouseEnv m a
+type WithClickhouseConnectionSettingsT m a = ReaderT ClickhouseConnectionSettings m a
 
-type WithClickhouseEnv a = Reader ClickhouseEnv a
+type WithClickhouseConnectionSettings a = Reader ClickhouseConnectionSettings a
 
 data SchemaStatus = Matched | Unmatched [Sql]
   deriving (Show, Eq)
@@ -64,12 +64,12 @@ checkSchema mig =
     migrations -> Unmatched migrations
 
 migrate' ::
-  ClickhouseEnv ->
+  ClickhouseConnectionSettings ->
   [EntityDef] ->
   (Text -> IO Statement) ->
   EntityDef ->
   IO (Either [Text] [(Bool, Text)])
-migrate' env@ClickhouseEnv {..} allDefs getter entity = (fmap . fmap . fmap $ showAlterDb) . (`runReaderT` env) $ do
+migrate' env@ClickhouseConnectionSettings {..} allDefs getter entity = (fmap . fmap . fmap $ showAlterDb) . (`runReaderT` env) $ do
   liveColumns <- getColumns getter entity newcols'
   case partitionEithers liveColumns of
     -- Live table columns successfully parsed
@@ -99,7 +99,7 @@ migrate' env@ClickhouseEnv {..} allDefs getter entity = (fmap . fmap . fmap $ sh
 doesTableExist ::
   (Text -> IO Statement) ->
   EntityNameDB ->
-  WithClickhouseEnvT IO Bool
+  WithClickhouseConnectionSettingsT IO Bool
 doesTableExist getter (EntityNameDB name) = do
   dbScheme <- asks (^. #dbScheme)
   let sql = "SELECT count(*) FROM system.tables WHERE database = ? AND name = ?"
@@ -207,7 +207,7 @@ getColumns ::
   (Text -> IO Statement) ->
   EntityDef ->
   [Column] ->
-  WithClickhouseEnvT IO [Either Text Column]
+  WithClickhouseConnectionSettingsT IO [Either Text Column]
 getColumns getter def cols = do
   -- Find out all columns.
   stmtClmns <-

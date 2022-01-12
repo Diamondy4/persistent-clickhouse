@@ -45,11 +45,11 @@ packages:
     git: https://github.com/GetShopTV/clickhouse-driver.git
     pantry-tree:
       size: 1566
-      sha256: f19eb715538ab8887de8f612ee802d844a76b608c0f6c6c77082492e8d317f77
-    commit: 421d1d0170386a3776a6062d6abdf37868cee1d0
+      sha256: d79a810c002f3f8aa3d901631e57510f37d41fd144afef3746552f2c95788b6f
+    commit: 275f33bc10c804306dad462c04c9aec958b92a52
   original:
     git: https://github.com/GetShopTV/clickhouse-driver.git
-    commit: 421d1d0170386a3776a6062d6abdf37868cee1d0
+    commit: 275f33bc10c804306dad462c04c9aec958b92a52
 snapshots:
 - completed:
     size: 586103
