@@ -1,10 +1,12 @@
 {-# LANGUAGE OverloadedLists #-}
 
-module Database.Persist.ClickHouse.Conversion where
+module Database.Persist.ClickHouse.Internal.Conversion where
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
+import Data.Foldable
 import Data.Serialize.Put
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.UUID as UUID
 import qualified Data.Vector as V
@@ -54,13 +56,8 @@ persistValueToClickhouseType pv =
       error "Refusing to serialize a PersistObjectId to a ClickHouse value"
   where
     toClickTuple x y = ClickTuple [x, y]
-    textToClickText txt = ClickString . TE.encodeUtf8 . escape $ txt
+    textToClickText txt = ClickString . TE.encodeUtf8 $ txt
     listToClickArray values = ClickArray . V.map persistValueToClickhouseType $ V.fromList values
-    escape (ch :< substr) =
-      if ch == '\''
-        then traceShow "escaped!" $ '\\' :< ch :< escape substr
-        else ch :< substr
-    escape txt = txt
 
 clickhouseTypeToPersistValue :: ClickhouseType -> PersistValue
 clickhouseTypeToPersistValue ch =

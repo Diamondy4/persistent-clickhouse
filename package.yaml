@@ -26,7 +26,6 @@ dependencies:
   - clickhouse-driver
   - text
   - vector
-  - req
   - exceptions
   - conduit
   - cassava
@@ -42,11 +41,8 @@ dependencies:
   - pretty-simple 
   - aeson
   - cereal
-  - newtype
 
-library:
-  source-dirs: src
-  default-extensions:
+default-extensions:
   - OverloadedStrings
   - TypeOperators
   - TypeApplications
@@ -70,6 +66,9 @@ library:
   - PolyKinds
   - FlexibleContexts
   - FlexibleInstances
+
+library:
+  source-dirs: src
 
 tests:
   persistent-clickhouse-test:

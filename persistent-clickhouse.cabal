@@ -25,12 +25,14 @@ source-repository head
 
 library
   exposed-modules:
-      Database.ClickHouse.From
-      Database.Persist.ClickHouse
-      Database.Persist.ClickHouse.Conversion
+      Database.Persist.ClickHouse.Backend
+      Database.Persist.ClickHouse.Internal.Backend
+      Database.Persist.ClickHouse.Internal.Conversion
+      Database.Persist.ClickHouse.Internal.Migrate
+      Database.Persist.ClickHouse.Internal.Misc
+      Database.Persist.ClickHouse.Internal.PersistFieldInstances
+      Database.Persist.ClickHouse.Internal.SqlBackend
       Database.Persist.ClickHouse.Migrate
-      Database.Persist.ClickHouse.PersistField
-      Database.Persist.ClickHouse.TH
   other-modules:
       Paths_persistent_clickhouse
   hs-source-dirs:
@@ -72,11 +74,9 @@ library
     , exceptions
     , monad-logger
     , mtl
-    , newtype
     , optics >=0.4
     , persistent
     , pretty-simple
-    , req
     , template-haskell
     , text
     , time
@@ -92,6 +92,30 @@ test-suite persistent-clickhouse-test
       Paths_persistent_clickhouse
   hs-source-dirs:
       test
+  default-extensions:
+      OverloadedStrings
+      TypeOperators
+      TypeApplications
+      TypeFamilies
+      DataKinds
+      FunctionalDependencies
+      LambdaCase
+      NamedFieldPuns
+      ViewPatterns
+      PatternSynonyms
+      GADTs
+      DeriveGeneric
+      DeriveAnyClass
+      DerivingStrategies
+      GeneralizedNewtypeDeriving
+      OverloadedLabels
+      OverloadedStrings
+      OverloadedLists
+      BangPatterns
+      DuplicateRecordFields
+      PolyKinds
+      FlexibleContexts
+      FlexibleInstances
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       PyF
@@ -106,12 +130,10 @@ test-suite persistent-clickhouse-test
     , exceptions
     , monad-logger
     , mtl
-    , newtype
     , optics >=0.4
     , persistent
     , persistent-clickhouse
     , pretty-simple
-    , req
     , template-haskell
     , text
     , time
