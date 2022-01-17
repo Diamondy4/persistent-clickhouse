@@ -9,9 +9,10 @@ import Language.Haskell.TH
 
 type ClickhouseHTTPBackend = ClickhouseBackend ClientHTTP
 
--- | PersistSettings for Clickhouse HTTP backend. Disables field prefix autogeneration. 
+-- | PersistSettings for Clickhouse HTTP backend. Disables field prefix autogeneration.
 -- Use generics for lens generation.
 clickhouseSettings :: MkPersistSettings
-clickhouseSettings = def {mpsPrefixFields = False}
+clickhouseSettings = def {mpsFieldLabelModifier = ignoreFieldPrefix}
   where
     def = mkPersistSettings $ ConT ''ClickhouseHTTPBackend
+    ignoreFieldPrefix _ field = field
