@@ -21,17 +21,13 @@ import qualified Data.Conduit.List as CL
 import Data.Either (partitionEithers)
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NEL
-import qualified Data.Map as Map
 import Data.Text (Text)
 import qualified Data.Text as T
-import Database.Clickhouse.Client.HTTP.Types
 import Database.Clickhouse.Types
 import Database.Persist.ClickHouse.Internal.Misc
 import Database.Persist.Sql
-import qualified Database.Persist.Sql.Util as Util
 import GHC.Stack (HasCallStack)
-import Optics (Magnify (magnify), Zoom (zoom), (%), (&), (<&>), (^.))
-import Optics.Generic
+import Optics ((<&>), (^.))
 import PyF
 
 type WithClickhouseConnectionSettingsT m a = ReaderT ClickhouseConnectionSettings m a
@@ -69,7 +65,7 @@ migrate' ::
   (Text -> IO Statement) ->
   EntityDef ->
   IO (Either [Text] [(Bool, Text)])
-migrate' env@ClickhouseConnectionSettings {..} allDefs getter entity = (fmap . fmap . fmap $ showAlterDb) . (`runReaderT` env) $ do
+migrate' env allDefs getter entity = (fmap . fmap . fmap $ showAlterDb) . (`runReaderT` env) $ do
   liveColumns <- getColumns getter entity newcols'
   case partitionEithers liveColumns of
     -- Live table columns successfully parsed
@@ -139,7 +135,7 @@ addTable cols entity =
         EntityIdNaturalKey pdef ->
           let definedPrimKeyTxt = T.intercalate "," $ T.pack . escapeF . fieldDB <$> NEL.toList (compositeFields pdef)
            in [fmt|PRIMARY KEY ( {definedPrimKeyTxt} ),|]
-        EntityIdField field -> error "Surrogate keys not supported. Please define primary key fields."
+        EntityIdField _ -> error "Surrogate keys not supported. Please define primary key fields."
 
 safeToRemove :: EntityDef -> FieldNameDB -> Bool
 safeToRemove def (FieldNameDB colName) =
@@ -176,7 +172,7 @@ findAlters ::
   Column ->
   [Column] ->
   ([AlterColumn], [Column])
-findAlters defs edef col@(Column name isNull sqltype def _ _ _ _) cols =
+findAlters _defs edef col@(Column name isNull sqltype def _ _ _ _) cols =
   case List.find (\c -> cName c == name) cols of
     Nothing ->
       ([Add' col], cols)
@@ -208,7 +204,7 @@ getColumns ::
   EntityDef ->
   [Column] ->
   WithClickhouseConnectionSettingsT IO [Either Text Column]
-getColumns getter def cols = do
+getColumns getter def _cols = do
   -- Find out all columns.
   stmtClmns <-
     liftIO . getter $
@@ -239,9 +235,9 @@ getColumn
   [ PersistText cname,
     PersistText colType,
     PersistInt64 null_,
-    colPrecision,
-    colScale,
-    primKey
+    _colPrecision,
+    _colScale,
+    _primKey
     ] = do
     return
       Column
@@ -276,7 +272,7 @@ chMkColumns :: [EntityDef] -> EntityDef -> [Column]
 chMkColumns allDefs t = let (columns, _, _) = mkColumns allDefs t emptyBackendSpecificOverrides in columns
 
 showColumn :: Column -> Text
-showColumn (Column !n !isNull !sqlType' def gen _ _maxLen _ref) =
+showColumn (Column !n !isNull !sqlType' def _gen _ _maxLen _ref) =
   [fmt|\
 {colName} {colType} {colDefault}
   |]

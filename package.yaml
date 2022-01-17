@@ -1,10 +1,10 @@
 name: persistent-clickhouse
 version: 0.1.0.0
-github: "githubuser/persistent-clickhouse"
+github: "diamondy4/persistent-clickhouse"
 license: BSD3
-author: "Author name here"
-maintainer: "example@example.com"
-copyright: "2021 Author name here"
+author: Diamondy4
+maintainer: "diamondy4@hotmail.com"
+copyright: "2021 Diamondy4"
 
 extra-source-files:
   - README.md
@@ -70,6 +70,8 @@ default-extensions:
 
 library:
   source-dirs: src
+  ghc-options:
+    - -Wall
 
 tests:
   persistent-clickhouse-test:

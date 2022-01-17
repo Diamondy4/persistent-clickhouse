@@ -3,7 +3,6 @@ module Database.Persist.ClickHouse.Migrate where
 import Conduit (MonadUnliftIO)
 import Control.Monad.IO.Class
 import Control.Monad.Reader
-import Data.Functor
 import Data.Text (Text)
 import Database.Persist.ClickHouse.Internal.Migrate as IM
 import Database.Persist.Sql
@@ -14,7 +13,6 @@ import Database.Persist.Sql
     withBaseBackend,
   )
 import qualified Database.Persist.Sql.Migration as PM
-import GHC.Stack
 
 checkSchema ::
   ( HasPersistBackend backend,

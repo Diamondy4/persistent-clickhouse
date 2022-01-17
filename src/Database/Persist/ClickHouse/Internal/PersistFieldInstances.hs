@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
+-- TODO: Maybe split instances in another package?
 module Database.Persist.ClickHouse.Internal.PersistFieldInstances where
 
 import qualified Data.ByteString.Char8 as BSC

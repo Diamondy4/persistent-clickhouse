@@ -2,20 +2,15 @@
 
 module Database.Persist.ClickHouse.Internal.Conversion where
 
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
-import Data.Foldable
 import Data.Serialize.Put
-import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.UUID as UUID
 import qualified Data.Vector as V
 import Database.Clickhouse.Types
 import Database.Persist
-import Debug.Trace
 import Foreign (fromBool)
 import GHC.Real (Ratio ((:%)))
-import Optics
 
 -- | Convert PersistValue to ClickHouseType
 persistValueToClickhouseType :: PersistValue -> ClickhouseType
@@ -40,10 +35,10 @@ persistValueToClickhouseType pv =
     PersistUTCTime utcTime -> ClickDateTime utcTime
     -- Containers
     PersistList values -> listToClickArray values
-    PersistMap map ->
+    PersistMap pMap ->
       let entryToTuple (key, value) =
             toClickTuple (textToClickText key) (persistValueToClickhouseType value)
-       in ClickArray . V.map entryToTuple $ V.fromList map
+       in ClickArray . V.map entryToTuple $ V.fromList pMap
     PersistArray values -> listToClickArray values
     -- Arbitrary specific data (for types that need special encoding)
     PersistLiteral_ DbSpecific s -> ClickString s
