@@ -8,45 +8,22 @@
 module Database.Persist.ClickHouse.Internal.SqlBackend where
 
 import Conduit
-import Control.Exception (Exception, throw)
-import Control.Monad (when)
-import Control.Monad.Catch (MonadThrow)
-import Control.Monad.Logger (MonadLoggerIO, NoLoggingT (runNoLoggingT))
-import Control.Monad.Reader (MonadReader, ReaderT (runReaderT), ask, mapReaderT, withReaderT)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.ByteString.Lazy as L
-import qualified Data.ByteString.Lazy.Char8 as LC
-import Data.Data (Typeable)
-import Data.Functor (void, ($>))
-import Data.IORef (newIORef)
 import Data.Int (Int64)
-import qualified Data.Map as Map
 import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TLE
-import qualified Data.UUID as UUID
 import qualified Data.Vector as V
-import Data.Word (Word64)
 import Database.ClickHouse
-import Database.Clickhouse.Client.HTTP.Client
-import Database.Clickhouse.Client.HTTP.Types
 import Database.Clickhouse.Conversion.TSV.From
 import Database.Clickhouse.Conversion.Types
 import Database.Clickhouse.Conversion.Values.Renderer (PreparedQuery (PreparedQuery))
 import Database.Clickhouse.Types
 import Database.Persist.ClickHouse.Internal.Conversion
 import Database.Persist.ClickHouse.Internal.Misc
+import Database.Persist.ClickHouse.Internal.SQL
 import Database.Persist.Sql
-import Database.Persist.Sql.Types.Internal (makeIsolationLevelStatement)
-import qualified Database.Persist.Sql.Util as Util
-import Database.Persist.SqlBackend
-import Foreign (fromBool)
-import GHC.Real (Ratio ((:%)))
-import PyF
-import Database.Persist.ClickHouse.Internal.Backend
 
 -- | Prepare a query.  We don't support prepared statements, but
 -- we'll do some client-side preprocessing here.
@@ -135,7 +112,7 @@ withStmt' settings !connection !query !params = do
 insertSqlBackend' :: EntityDef -> [PersistValue] -> InsertSqlResult
 insertSqlBackend' ent vals =
   case insertSqlValues' ent vals of
-    InsertClickhouseQuery sql vals -> ISRManyKeys sql vals
+    InsertClickhouseQuery sql vals' -> ISRManyKeys sql vals'
 
 {- withClickHouse ::
   (MonadUnliftIO m, MonadLoggerIO m, ClickhouseClient client) =>
