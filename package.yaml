@@ -41,6 +41,7 @@ dependencies:
   - pretty-simple 
   - aeson
   - cereal
+  - case-insensitive
 
 default-extensions:
   - OverloadedStrings
