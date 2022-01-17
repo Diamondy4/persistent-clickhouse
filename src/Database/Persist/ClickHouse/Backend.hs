@@ -7,10 +7,6 @@ module Database.Persist.ClickHouse.Backend
   )
 where
 
-{-   ( module Database.Persist.ClickHouse.Backend,
-    module Database.Persist.ClickHouse.Internal.PersistFieldInstances,
-  ) -}
-
 import Conduit
 import qualified Control.Exception as E
 import Control.Monad.Logger
