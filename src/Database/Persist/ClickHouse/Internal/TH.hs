@@ -1,18 +1,10 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Database.Persist.ClickHouse.Internal.TH where
 
-import Database.Clickhouse.Client.HTTP.Client
-import Database.Persist.ClickHouse.Internal.Backend
 import Database.Persist.TH
-import Language.Haskell.TH
 
-type ClickhouseHTTPBackend = ClickhouseBackend ClientHTTP
-
--- | PersistSettings for Clickhouse HTTP backend. Disables field prefix autogeneration.
+-- | PersistSettings that disables field prefix autogeneration.
 -- Use generics for lens generation.
-clickhouseSettings :: MkPersistSettings
-clickhouseSettings = def {mpsFieldLabelModifier = ignoreFieldPrefix}
+sqlSettingsNoPrefix :: MkPersistSettings
+sqlSettingsNoPrefix = sqlSettings {mpsFieldLabelModifier = ignoreFieldPrefix}
   where
-    def = mkPersistSettings $ ConT ''ClickhouseHTTPBackend
     ignoreFieldPrefix _ field = field
