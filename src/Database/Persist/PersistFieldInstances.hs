@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- TODO: Maybe split instances in another package?
-module Database.Persist.ClickHouse.Internal.PersistFieldInstances where
+module Database.Persist.PersistFieldInstances where
 
 import qualified Data.ByteString.Char8 as BSC
 import           Data.CaseInsensitive  (CI (original), mk)

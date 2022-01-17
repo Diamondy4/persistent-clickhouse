@@ -30,11 +30,11 @@ library
       Database.Persist.ClickHouse.Internal.Conversion
       Database.Persist.ClickHouse.Internal.Migrate
       Database.Persist.ClickHouse.Internal.Misc
-      Database.Persist.ClickHouse.Internal.PersistFieldInstances
       Database.Persist.ClickHouse.Internal.SQL
       Database.Persist.ClickHouse.Internal.SqlBackend
       Database.Persist.ClickHouse.Internal.TH
       Database.Persist.ClickHouse.Migrate
+      Database.Persist.PersistFieldInstances
   other-modules:
       Paths_persistent_clickhouse
   hs-source-dirs:
