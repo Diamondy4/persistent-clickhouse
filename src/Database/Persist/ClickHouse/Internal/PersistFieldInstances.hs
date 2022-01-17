@@ -3,6 +3,8 @@
 module Database.Persist.ClickHouse.Internal.PersistFieldInstances where
 
 import qualified Data.ByteString.Char8 as BSC
+import Data.CaseInsensitive (CI (original), mk)
+import Data.Text (Text)
 import qualified Data.Text as T
 import Data.UUID (UUID)
 import qualified Data.UUID as UUID
@@ -21,3 +23,10 @@ instance PersistField UUID where
           Right
           (UUID.fromString . BSC.unpack $ bs)
       _ -> Left $ "Expected PersistLiteral_ DbSpecific, got " <> T.pack (show pv)
+
+instance PersistField (CI Text) where
+  toPersistValue = PersistText . original
+  fromPersistValue pv =
+    case pv of
+      PersistText text -> Right . mk $ text
+      _ -> Left $ "Expected PersistText, got " <> T.pack (show pv)

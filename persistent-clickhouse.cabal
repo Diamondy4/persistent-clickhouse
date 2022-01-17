@@ -66,6 +66,7 @@ library
     , aeson
     , base >=4.7 && <5
     , bytestring
+    , case-insensitive
     , cassava
     , cereal
     , clickhouse-driver
@@ -122,6 +123,7 @@ test-suite persistent-clickhouse-test
     , aeson
     , base >=4.7 && <5
     , bytestring
+    , case-insensitive
     , cassava
     , cereal
     , clickhouse-driver
