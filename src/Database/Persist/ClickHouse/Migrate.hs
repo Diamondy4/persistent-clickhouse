@@ -1,18 +1,43 @@
-module Database.Persist.ClickHouse.Migrate where
+{-# LANGUAGE PartialTypeSignatures #-}
+module Database.Persist.ClickHouse.Migrate
+  ( module Database.Persist.ClickHouse.Migrate
+  , SchemaStatus
+  ) where
 
-import Conduit (MonadUnliftIO)
-import Control.Monad.IO.Class
-import Control.Monad.Reader
-import Data.Text (Text)
-import Database.Persist.ClickHouse.Internal.Migrate as IM
-import Database.Persist.Sql
-  ( HasPersistBackend (BaseBackend),
-    Migration,
-    Sql,
-    SqlBackend,
-    withBaseBackend,
-  )
-import qualified Database.Persist.Sql.Migration as PM
+import           Conduit                        ( MonadUnliftIO )
+import           Control.Monad.IO.Class
+import           Control.Monad.Reader
+import           Data.Maybe                     ( catMaybes )
+import           Data.Text                      ( Text )
+import           Data.Traversable
+import qualified Database.Persist.ClickHouse.Internal.Migrate
+                                               as IM
+import           Database.Persist.ClickHouse.Internal.Migrate
+                                                ( SchemaStatus(..)
+                                                , UnmatchedSchema
+                                                )
+import           Database.Persist.Sql           ( HasPersistBackend(..)
+                                                , Migration
+                                                , Sql
+                                                , SqlBackend
+                                                , withBaseBackend
+                                                )
+import qualified Database.Persist.Sql.Migration
+                                               as PM
+
+getUnmatchedSchemas ::
+  ( HasPersistBackend backend,
+    MonadIO m,
+    BaseBackend backend ~ SqlBackend
+  ) =>
+  [Migration] ->
+  ReaderT backend m [UnmatchedSchema]
+getUnmatchedSchemas migs = fmap catMaybes $ for migs $ \mig -> do
+  schemaStatus <- checkSchema mig
+  pure $ check schemaStatus
+ where
+  check (Unmatched schema) = Just schema
+  check Matched            = Nothing
 
 checkSchema ::
   ( HasPersistBackend backend,
