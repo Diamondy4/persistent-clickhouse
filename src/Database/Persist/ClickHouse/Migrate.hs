@@ -1,7 +1,8 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 module Database.Persist.ClickHouse.Migrate
   ( module Database.Persist.ClickHouse.Migrate
-  , SchemaStatus
+  , SchemaStatus(..)
+  , UnmatchedSchema(..)
   ) where
 
 import           Conduit                        ( MonadUnliftIO )
