@@ -104,9 +104,6 @@ withStmt' settings !connection !query !params = do
   result <- mkAcquire action (const $ return ())
   let (_, !colData) = decodeToClickhouseRows result
       colDataPV = V.map (V.toList . V.map clickhouseTypeToPersistValue) colData
-  liftIO $ BS.putStrLn "\n"
-  liftIO $ BS.putStrLn $ BS.pack $ show colDataPV
-  liftIO $ BS.putStrLn "\n"
   return $ yieldMany colDataPV
 
 insertSqlBackend' :: EntityDef -> [PersistValue] -> InsertSqlResult
