@@ -209,9 +209,7 @@ getColumns getter def _cols = do
 SELECT name AS column_name,
 if(startsWith(type, 'Nullable'), substring(type, 10, length(type) - 10), type) AS column_type,
 startsWith(type, 'Nullable') AS is_nullable,
-is_in_primary_key AS primary_key,
-numeric_precision,
-numeric_scale
+is_in_primary_key AS primary_key
 FROM system.columns
 WHERE database = ?
 AND table = ?;|]
@@ -226,7 +224,7 @@ AND table = ?;|]
 
 -- | Get the information about a column in a table.
 getColumn :: HasCallStack => [PersistValue] -> Either Text Column
-getColumn [PersistText cname, PersistText colType, PersistInt64 null_, _colPrecision, _colScale, _primKey]
+getColumn [PersistText cname, PersistText colType, PersistInt64 null_, _primKey]
   = do
     return Column { cName                  = FieldNameDB cname
                   , cNull                  = null_ == 1
