@@ -90,6 +90,9 @@ instance (ClickhouseClient connectionType) => PersistStoreRead (ClickhouseBacken
   get k = withBaseBackend $ get k
   getMany ks = withBaseBackend $ getMany ks
 
+instance (ClickhouseClient connectionType) => PersistUniqueRead (ClickhouseBackend connectionType) where
+    getBy k = withBaseBackend $ getBy k
+
 instance (ClickhouseClient connectionType) => PersistStoreWrite (ClickhouseBackend connectionType) where
   insert val = do
     let esql = insertSqlValues' t vals

@@ -1,0 +1,7 @@
+packages:
+  .
+  
+source-repository-package
+  type: git
+  location: git@github.com:GetShopTV/clickhouse-driver.git
+  tag: c4ac354629f6411cc12e1bea7bd841991504d488
