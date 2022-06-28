@@ -31,16 +31,17 @@ import Database.Persist.SqlBackend
 import GHC.Generics
 import Optics ((^.))
 
--- | Clickhouse connection. Note that it is static - ClickHouse
--- doesn't need to keep it open, every action is atomic.
+{- | Clickhouse connection. Note that it is static - ClickHouse
+ doesn't need to keep it open, every action is atomic.
+-}
 data ClickhouseBackend connectionType = ClickhouseBackend
   { -- | Settings that are indifferent to connection type, i.e. login/password/schema
-    env :: !ClickhouseConnectionSettings,
-    -- | Settings specific to connection type, i.e. host/port for HTTP
-    settings :: !(ClickhouseClientSettings connectionType),
-    -- | Used in conversion to SqlBackend
-    stmtMap :: !(IORef (Map Text Statement)),
-    logFunc :: !LogFunc
+    env :: !ClickhouseConnectionSettings
+  , -- | Settings specific to connection type, i.e. host/port for HTTP
+    settings :: !(ClickhouseClientSettings connectionType)
+  , -- | Used in conversion to SqlBackend
+    stmtMap :: !(IORef (Map Text Statement))
+  , logFunc :: !LogFunc
   }
   deriving (Generic)
 
@@ -56,44 +57,44 @@ instance PersistField (BackendKey (ClickhouseBackend connectionType)) where
 
 clickhouseBackendToSqlBackend ::
   forall connectionType.
-  (ClickhouseClient connectionType) =>
+  (ClickhouseClientSource connectionType) =>
   ClickhouseBackend connectionType ->
   SqlBackend
 clickhouseBackendToSqlBackend clickbackend =
   mkSqlBackend
     MkSqlBackendArgs
-      { connPrepare = prepare' (clickbackend ^. #settings) (clickbackend ^. #env),
-        connInsertSql = insertSqlBackend',
-        connStmtMap = clickbackend ^. #stmtMap,
-        connClose = return (),
-        connMigrateSql = migrate' $ clickbackend ^. #env,
-        connBegin = \_ _ -> return (),
-        connCommit = \_ -> return (),
-        connRollback = \_ -> return (),
-        connEscapeFieldName = T.pack . escapeF,
-        connEscapeTableName = T.pack . escapeE . getEntityDBName,
-        connEscapeRawName = T.pack . escapeDBName . T.unpack,
-        connNoLimit = "LIMIT 18446744073709551615",
-        connRDBMS = "clickhouse",
-        connLimitOffset = decorateSQLWithLimitOffset "LIMIT 18446744073709551615",
-        connLogFunc = clickbackend ^. #logFunc
+      { connPrepare = prepare' (clickbackend ^. #settings) (clickbackend ^. #env)
+      , connInsertSql = insertSqlBackend'
+      , connStmtMap = clickbackend ^. #stmtMap
+      , connClose = return ()
+      , connMigrateSql = migrate' $ clickbackend ^. #env
+      , connBegin = \_ _ -> return ()
+      , connCommit = \_ -> return ()
+      , connRollback = \_ -> return ()
+      , connEscapeFieldName = T.pack . escapeF
+      , connEscapeTableName = T.pack . escapeE . getEntityDBName
+      , connEscapeRawName = T.pack . escapeDBName . T.unpack
+      , connNoLimit = "LIMIT 18446744073709551615"
+      , connRDBMS = "clickhouse"
+      , connLimitOffset = decorateSQLWithLimitOffset "LIMIT 18446744073709551615"
+      , connLogFunc = clickbackend ^. #logFunc
       }
 
-instance (ClickhouseClient connectionType) => BackendCompatible SqlBackend (ClickhouseBackend connectionType) where
+instance (ClickhouseClientSource connectionType) => BackendCompatible SqlBackend (ClickhouseBackend connectionType) where
   projectBackend = clickhouseBackendToSqlBackend
 
-instance (ClickhouseClient connectionType) => HasPersistBackend (ClickhouseBackend connectionType) where
+instance (ClickhouseClientSource connectionType) => HasPersistBackend (ClickhouseBackend connectionType) where
   type BaseBackend (ClickhouseBackend connectionType) = SqlBackend
   persistBackend = clickhouseBackendToSqlBackend
 
-instance (ClickhouseClient connectionType) => PersistStoreRead (ClickhouseBackend connectionType) where
+instance (ClickhouseClientSource connectionType) => PersistStoreRead (ClickhouseBackend connectionType) where
   get k = withBaseBackend $ get k
   getMany ks = withBaseBackend $ getMany ks
 
-instance (ClickhouseClient connectionType) => PersistUniqueRead (ClickhouseBackend connectionType) where
-    getBy k = withBaseBackend $ getBy k
+instance (ClickhouseClientSource connectionType) => PersistUniqueRead (ClickhouseBackend connectionType) where
+  getBy k = withBaseBackend $ getBy k
 
-instance (ClickhouseClient connectionType) => PersistStoreWrite (ClickhouseBackend connectionType) where
+instance (ClickhouseClientSource connectionType) => PersistStoreWrite (ClickhouseBackend connectionType) where
   insert val = do
     let esql = insertSqlValues' t vals
 
@@ -109,9 +110,9 @@ instance (ClickhouseClient connectionType) => PersistStoreWrite (ClickhouseBacke
              in case keyFromValues keyvals of
                   Right k -> return k
                   Left e -> error $ "InsertClickhouseQuery: unexpected keyvals result: " `mappend` T.unpack e
-    where
-      t = entityDef $ Just val
-      vals = mkInsertValues val
+   where
+    t = entityDef $ Just val
+    vals = mkInsertValues val
 
   insertMany recs = do
     conn <- ask
@@ -134,22 +135,22 @@ instance (ClickhouseClient connectionType) => PersistStoreWrite (ClickhouseBacke
                   Right k -> k
                   Left e -> error $ "InsertClickhouseQuery: unexpected keyvals result: " `mappend` T.unpack e
              in pure $ processKeyvals . getKeyvals <$> vals
-    where
-      vals = mkInsertValues <$> recs
-      valsV = V.fromList $ mkInsertValues <$> recs
-      clickhouseTypeVals = rowsPersistValueToClickhouseType vals
-      t = entityDef recs
+   where
+    vals = mkInsertValues <$> recs
+    valsV = V.fromList $ mkInsertValues <$> recs
+    clickhouseTypeVals = rowsPersistValueToClickhouseType vals
+    t = entityDef recs
 
   insertKey = error "Clickhouse doesn't support insertion by key, please use insert with whole record"
-  
-  -- TODO: Think what to do with mutation statements. Currently they are unsupported but must be defined for 
+
+  -- TODO: Think what to do with mutation statements. Currently they are unsupported but must be defined for
   -- PersistStoreWrite. Maybe split the  typeclass in persistent package?
   repsert = error "Repsert functionality is not implemented for Clickhouse as it dangerous to be called"
   replace = error "Replace functionality is not implemented for Clickhouse as it dangerous to be called"
   delete = error "Delete functionality is not implemented for Clickhouse as it dangerous to be called"
   update = error "Update functionality is not implemented for Clickhouse as it dangerous to be called"
 
-instance (ClickhouseClient connectionType) => PersistQueryRead (ClickhouseBackend connectionType) where
+instance (ClickhouseClientSource connectionType) => PersistQueryRead (ClickhouseBackend connectionType) where
   selectSourceRes f opts = withBaseBackend $ selectSourceRes f opts
   selectKeysRes f opts = withBaseBackend $ selectKeysRes f opts
   count f = withBaseBackend $ count f

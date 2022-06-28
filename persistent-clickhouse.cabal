@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.35.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -81,6 +81,7 @@ library
     , optics >=0.4
     , persistent
     , pretty-simple
+    , resourcet
     , template-haskell
     , text
     , time
@@ -139,6 +140,7 @@ test-suite persistent-clickhouse-test
     , persistent
     , persistent-clickhouse
     , pretty-simple
+    , resourcet
     , template-haskell
     , text
     , time
