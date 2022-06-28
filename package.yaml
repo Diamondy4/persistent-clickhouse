@@ -42,6 +42,7 @@ dependencies:
   - aeson
   - cereal
   - case-insensitive
+  - resourcet
 
 default-extensions:
   - OverloadedStrings
