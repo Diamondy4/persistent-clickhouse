@@ -2,51 +2,45 @@
 
 module Database.Persist.ClickHouse.Internal.SQL where
 
-import qualified Data.Text as T
-import Data.Vector (Vector)
-import qualified Data.Vector as V
-import Database.Clickhouse.Types (ClickhouseType)
+import Control.Monad
+import Data.Text qualified as T
+import Database.Clickhouse.Client.Types (ClickhouseType, Query)
+import Database.Clickhouse.Conversion.CSV.Renderer
+import Database.Clickhouse.Conversion.Types
 import Database.Persist
 import Database.Persist.ClickHouse.Internal.Conversion
 import Database.Persist.ClickHouse.Internal.Misc
-import qualified Database.Persist.Sql.Util as Util
+import Database.Persist.Sql
+import Database.Persist.Sql.Util qualified as Util
 import PyF
 
-insertSqlValues' :: EntityDef -> [PersistValue] -> InsertClickhouseQuery
-insertSqlValues' ent vals =
-  case getEntityId ent of
-    EntityIdNaturalKey _ ->
-      InsertClickhouseQuery sql vals
-    EntityIdField _ ->
-      error "Generated ID column not supported, please specify primary key"
-  where
-    --ISRInsertGet sql "SELECT LAST_INSERT_ID()"
-    (fieldNames, placeholders) = unzip (Util.mkInsertPlaceholders ent escapeFT)
-    sql =
+insertManySql :: EntityDef -> [[PersistValue]] -> Query
+insertManySql ent = renderRows sql . rowsPersistValueToClickhouseType
+ where
+  --ISRInsertGet sql "SELECT LAST_INSERT_ID()"
+  (fieldNames, _placeholderForFields) = unzip (Util.mkInsertPlaceholders ent escapeFT)
+  sql =
+    CSVQuery
       [fmt|\
 INSERT INTO {tableName} ( {T.intercalate ", " fieldNames} )
-VALUES ( {T.intercalate "," placeholders} )
-      |]
-    tableName = escapeET $ getEntityDBName ent
-
-insertManySql' :: EntityDef -> Vector [PersistValue] -> InsertManyClickhouseQuery
-insertManySql' ent vals =
-  case getEntityId ent of
-    EntityIdNaturalKey _ ->
-      InsertManyClickhouseQuery sql vals
-    EntityIdField _ ->
-      error "Generated ID column not supported, please specify primary key"
-  where
-    --ISRInsertGet sql "SELECT LAST_INSERT_ID()"
-    (fieldNames, placeholderForFields) = unzip (Util.mkInsertPlaceholders ent escapeFT)
-    sql =
-      [fmt|\
-INSERT INTO {tableName} ( {T.intercalate ", " fieldNames} )
-VALUES {placeholders}|]
-    !rowsCount = V.length vals
-    placeholders = T.intercalate "," (replicate rowsCount placeholderText)
-    !placeholderText = [fmt|( {T.intercalate "," placeholderForFields} )|]
-    !tableName = escapeET $ getEntityDBName ent
+FORMAT CSV
+|]
+  !tableName = escapeET $ getEntityDBName ent
 
 rowsPersistValueToClickhouseType :: (Functor f, Functor row) => f (row PersistValue) -> f (row ClickhouseType)
 rowsPersistValueToClickhouseType pvs = fmap persistValueToClickhouseType <$> pvs
+
+-- | Fallback for SqlBackend
+insertManySql' :: EntityDef -> [[PersistValue]] -> InsertSqlResult
+insertManySql' ent vals = ISRManyKeys sql (join vals)
+ where
+  --ISRInsertGet sql "SELECT LAST_INSERT_ID()"
+  (fieldNames, placeholderForFields) = unzip (Util.mkInsertPlaceholders ent escapeFT)
+  sql =
+    [fmt|\
+INSERT INTO {tableName} ( {T.intercalate ", " fieldNames} )
+VALUES {placeholders}|]
+  !rowsCount = length vals
+  placeholders = T.intercalate "," (replicate rowsCount placeholderText)
+  !placeholderText = [fmt|( {T.intercalate "," placeholderForFields} )|]
+  !tableName = escapeET $ getEntityDBName ent

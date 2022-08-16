@@ -35,12 +35,9 @@ dependencies:
   - uuid
   - containers
   - template-haskell
-  - optics >= 0.4
   - tz
   - PyF
-  - pretty-simple 
   - aeson
-  - cereal
   - case-insensitive
   - resourcet
 
@@ -68,6 +65,7 @@ default-extensions:
   - PolyKinds
   - FlexibleContexts
   - FlexibleInstances
+  - ImportQualifiedPost
 
 library:
   source-dirs: src

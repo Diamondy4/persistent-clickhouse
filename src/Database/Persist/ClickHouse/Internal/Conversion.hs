@@ -2,14 +2,17 @@
 
 module Database.Persist.ClickHouse.Internal.Conversion where
 
-import qualified Data.ByteString.Char8 as BSC
-import Data.Serialize.Put
-import qualified Data.Text.Encoding as TE
-import qualified Data.UUID as UUID
-import qualified Data.Vector as V
-import Database.Clickhouse.Types
+import Data.Aeson qualified as Aeson
+import Data.ByteString.Char8 qualified as BC8
+import Data.ByteString.Char8 qualified as BSC
+import Data.ByteString.Lazy qualified as BSL
+import Data.Text.Encoding qualified as TE
+import Data.UUID qualified as UUID
+import Data.Vector qualified as V
+import Database.Clickhouse.Client.Types
 import Database.Persist
 import Foreign (fromBool)
+import GHC.Float (float2Double)
 import GHC.Real (Ratio ((:%)))
 
 -- | Convert PersistValue to ClickHouseType
@@ -21,7 +24,7 @@ persistValueToClickhouseType pv =
     PersistByteString txt -> ClickString txt
     --Numbers
     PersistInt64 int64 -> ClickInt64 int64
-    PersistDouble double -> ClickDecimal64 double
+    PersistDouble double -> ClickFloat64 double
     PersistRational (nom :% denom) ->
       toClickTuple (ClickInt128 $ fromIntegral nom) (ClickInt128 $ fromIntegral denom)
     -- Bool
@@ -45,14 +48,14 @@ persistValueToClickhouseType pv =
     PersistLiteral_ Unescaped l -> ClickString l
     PersistLiteral_ Escaped e -> ClickString e
     -- Other
-    PersistNull -> ClickNull
+    PersistNull -> ClickNullable Nothing
     PersistObjectId _ ->
       -- Value specific for Redis
       error "Refusing to serialize a PersistObjectId to a ClickHouse value"
-  where
-    toClickTuple x y = ClickTuple [x, y]
-    textToClickText txt = ClickString . TE.encodeUtf8 $ txt
-    listToClickArray values = ClickArray . V.map persistValueToClickhouseType $ V.fromList values
+ where
+  toClickTuple x y = ClickTuple [x, y]
+  textToClickText = ClickString . TE.encodeUtf8
+  listToClickArray values = ClickArray . V.map persistValueToClickhouseType $ V.fromList values
 
 clickhouseTypeToPersistValue :: ClickhouseType -> PersistValue
 clickhouseTypeToPersistValue ch =
@@ -70,23 +73,24 @@ clickhouseTypeToPersistValue ch =
     ClickUInt64 uint -> PersistInt64 $ fromIntegral uint
     ClickUInt128 uint -> PersistInt64 $ fromIntegral uint
     -- Floats/Doubles
-    ClickFloat32 flt -> PersistDouble $ realToFrac flt
+    ClickFloat32 flt -> PersistDouble $ float2Double flt
     ClickFloat64 dbl -> PersistDouble dbl
     -- Decimals
-    ClickDecimal flt -> PersistDouble $ realToFrac flt
-    ClickDecimal32 flt -> PersistDouble $ realToFrac flt
-    ClickDecimal64 dbl -> PersistDouble dbl
-    ClickDecimal128 dbl -> PersistDouble dbl
+    ClickDecimal32 dec -> PersistLiteral_ DbSpecific . BC8.pack $ show dec
+    ClickDecimal64 dec -> PersistLiteral_ DbSpecific . BC8.pack $ show dec
+    ClickDecimal128 dec -> PersistLiteral_ DbSpecific . BC8.pack $ show dec
     -- Date
     ClickDate day -> PersistDay day
     ClickDateTime dt -> PersistUTCTime dt
     -- IP
-    ClickIPv4 ip -> PersistLiteral_ DbSpecific . runPut . putWord32host $ ip
-    ClickIPv6 ip1 ip2 ip3 ip4 -> PersistLiteral_ DbSpecific . runPut . putListOf putWord32host $ [ip1, ip2, ip3, ip4]
+    ClickIPv4 ip -> PersistLiteral_ DbSpecific . BC8.pack $ show ip
+    ClickIPv6 ip -> PersistLiteral_ DbSpecific . BC8.pack $ show ip
     -- Arrays
     ClickArray arr -> PersistList . V.toList $ clickhouseTypeToPersistValue <$> arr
     ClickTuple tup -> PersistList . V.toList $ clickhouseTypeToPersistValue <$> tup
     -- Other
-    ClickUUID uuid -> PersistLiteral_ DbSpecific $ BSC.pack . UUID.toString $ uuid
+    ClickUUID uuid -> PersistLiteral_ DbSpecific . UUID.toASCIIBytes $ uuid
     ClickString str -> PersistText $ TE.decodeUtf8 str
-    ClickNull -> PersistNull
+    ClickNullable inner -> maybe PersistNull clickhouseTypeToPersistValue inner
+    ClickBool b -> PersistBool b
+    ClickJSON json -> PersistLiteral_ DbSpecific . BSL.toStrict . Aeson.encode $ json
