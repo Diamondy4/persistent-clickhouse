@@ -4,19 +4,19 @@
 -- TODO: Maybe split instances in another package?
 module Database.Persist.PersistFieldInstances where
 
-import qualified Data.ByteString.Char8 as BSC
-import           Data.CaseInsensitive  (CI (original), mk)
-import           Data.Text             (Text)
-import qualified Data.Text             as T
-import           Data.UUID             (UUID)
-import qualified Data.UUID             as UUID
-import           Database.Persist.Sql
+import Data.ByteString.Char8 qualified as BSC
+import Data.CaseInsensitive
+import Data.Text (Text)
+import Data.Text qualified as T
+import Data.UUID (UUID)
+import Data.UUID qualified as UUID
+import Database.Persist.Sql
 
 instance PersistFieldSql UUID where
   sqlType = const $ SqlOther "UUID"
 
 instance PersistField UUID where
-  toPersistValue uuid = PersistLiteral_ DbSpecific . BSC.pack . UUID.toString $ uuid
+  toPersistValue = PersistLiteral_ DbSpecific . UUID.toASCIIBytes
   fromPersistValue pv =
     case pv of
       PersistLiteral_ DbSpecific bs ->
@@ -30,7 +30,7 @@ instance PersistFieldSql (CI Text) where
   sqlType _ = SqlString
 
 instance PersistField (CI Text) where
-  toPersistValue = PersistText . original
+  toPersistValue = PersistText . foldedCase
   fromPersistValue pv =
     case pv of
       PersistText text -> Right . mk $ text

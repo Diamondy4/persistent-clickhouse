@@ -63,6 +63,7 @@ library
       PolyKinds
       FlexibleContexts
       FlexibleInstances
+      ImportQualifiedPost
   ghc-options: -Wall
   build-depends:
       PyF
@@ -71,16 +72,13 @@ library
     , bytestring
     , case-insensitive
     , cassava
-    , cereal
     , clickhouse-driver
     , conduit
     , containers
     , exceptions
     , monad-logger
     , mtl
-    , optics >=0.4
     , persistent
-    , pretty-simple
     , resourcet
     , template-haskell
     , text
@@ -121,6 +119,7 @@ test-suite persistent-clickhouse-test
       PolyKinds
       FlexibleContexts
       FlexibleInstances
+      ImportQualifiedPost
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       PyF
@@ -129,17 +128,14 @@ test-suite persistent-clickhouse-test
     , bytestring
     , case-insensitive
     , cassava
-    , cereal
     , clickhouse-driver
     , conduit
     , containers
     , exceptions
     , monad-logger
     , mtl
-    , optics >=0.4
     , persistent
     , persistent-clickhouse
-    , pretty-simple
     , resourcet
     , template-haskell
     , text

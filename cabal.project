@@ -6,4 +6,4 @@ allow-newer: cassava-conduit:bytestring
 source-repository-package
   type: git
   location: git@github.com:GetShopTV/clickhouse-driver.git
-  tag: 314d9ad1917060a58e32cf71c6c28fb2f0858889
+  tag: c1d4d903d7831241c99ea8fd0707a1f3f4fb8ae3

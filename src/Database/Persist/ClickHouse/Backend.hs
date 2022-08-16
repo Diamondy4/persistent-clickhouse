@@ -1,19 +1,19 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Database.Persist.ClickHouse.Backend
-  ( module Database.Persist.ClickHouse.Internal.Backend,
-    module Database.Persist.ClickHouse.Backend,
-    module Database.Persist.ClickHouse.Internal.TH,
-  )
-where
+module Database.Persist.ClickHouse.Backend (
+  module Database.Persist.ClickHouse.Internal.Backend,
+  module Database.Persist.ClickHouse.Backend,
+  module Database.Persist.ClickHouse.Internal.TH,
+) where
 
 import Conduit
-import qualified Control.Exception as E
+import Control.Exception qualified as E
 import Control.Monad.Logger
 import Control.Monad.Reader
 import Data.IORef
-import qualified Data.Map as Map
-import Database.Clickhouse.Types
+import Data.Map qualified as Map
+import Database.Clickhouse.Client.Types
 import Database.Persist.ClickHouse.Internal.Backend
 import Database.Persist.ClickHouse.Internal.TH
 import Database.Persist.Sql
@@ -21,26 +21,21 @@ import Database.Persist.Sql
 -- | Create new connection using client settings and logger
 openClickhouseConnectionSettings ::
   forall connectionType.
-  (ClickhouseClient connectionType) =>
-  ClickhouseClientSettings connectionType ->
-  ClickhouseConnectionSettings ->
+  (ClickhouseClientAcquire connectionType, ClickhouseClient connectionType) =>
+  ClickhouseConnectionSettings connectionType ->
   LogFunc ->
-  IO (ClickhouseBackend connectionType)
-openClickhouseConnectionSettings settings env logFunc = do
+  IO ClickhouseBackend
+openClickhouseConnectionSettings settings logFunc = do
   stmtMap <- newIORef Map.empty
-  return $
-    ClickhouseBackend
-      { env,
-        settings,
-        logFunc,
-        stmtMap
-      }
+  return $ ClickhouseBackend settings stmtMap logFunc
 
 withClickhouseConn ::
-  forall m a connectionType.
-  (MonadUnliftIO m, MonadLoggerIO m, ClickhouseClient connectionType) =>
-  (LogFunc -> IO (ClickhouseBackend connectionType)) ->
-  (ClickhouseBackend connectionType -> m a) ->
+  forall m a.
+  ( MonadUnliftIO m
+  , MonadLoggerIO m
+  ) =>
+  (LogFunc -> IO ClickhouseBackend) ->
+  (ClickhouseBackend -> m a) ->
   m a
 withClickhouseConn open f = do
   logFunc <- askLoggerIO
@@ -52,25 +47,31 @@ withClickhouseConn open f = do
 
 -- | Run db action in ClickHouse, providing logging monad manually.
 withClickHouse ::
-  (MonadUnliftIO m, MonadLoggerIO m, ClickhouseClient client) =>
-  ClickhouseClientSettings client ->
-  ClickhouseConnectionSettings ->
-  (ClickhouseBackend client -> m a) ->
+  forall client m a.
+  ( MonadUnliftIO m
+  , MonadLoggerIO m
+  , ClickhouseClientAcquire client
+  , ClickhouseClient client
+  ) =>
+  ClickhouseConnectionSettings client ->
+  (ClickhouseBackend -> m a) ->
   m a
-withClickHouse settings env = withClickhouseConn toOpen
-  where
-    toOpen = openClickhouseConnectionSettings settings env
+withClickHouse settings = withClickhouseConn toOpen
+ where
+  toOpen = openClickhouseConnectionSettings settings
 
 -- | Run db action in ClickHouse, without logging.
 runClickhouse ::
-  (MonadUnliftIO m, ClickhouseClient client) =>
-  ClickhouseClientSettings client ->
-  ClickhouseConnectionSettings ->
+  ( MonadUnliftIO m
+  , ClickhouseClientAcquire client
+  , ClickhouseClient client
+  ) =>
+  ClickhouseConnectionSettings client ->
   -- | database action
-  ReaderT (ClickhouseBackend client) (NoLoggingT (ResourceT m)) a ->
+  ReaderT ClickhouseBackend (NoLoggingT (ResourceT m)) a ->
   m a
-runClickhouse settings env =
+runClickhouse settings =
   runResourceT
     . runNoLoggingT
-    . withClickHouse settings env
+    . withClickHouse settings
     . runReaderT

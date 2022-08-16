@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -11,124 +12,93 @@ import Conduit
 import Data.ByteString (ByteString)
 import Data.Int (Int64)
 import Data.Text (Text)
-import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Lazy.Encoding as TLE
-import qualified Data.Vector as V
+import Data.Text.Lazy qualified as TL
+import Data.Text.Lazy.Encoding qualified as TLE
+import Data.Vector qualified as V
 import Database.ClickHouse
-import Database.Clickhouse.Conversion.TSV.From
+import Database.Clickhouse.Client.Types
+import Database.Clickhouse.Conversion.CSV.Decode
+import Database.Clickhouse.Conversion.PreparedQuery
 import Database.Clickhouse.Conversion.Types
-import Database.Clickhouse.Conversion.Values.Renderer (PreparedQuery (PreparedQuery))
-import Database.Clickhouse.Types
 import Database.Persist.ClickHouse.Internal.Conversion
-import Database.Persist.ClickHouse.Internal.Misc
-import Database.Persist.ClickHouse.Internal.SQL
 import Database.Persist.Sql
 
-{- | Prepare a query.  We don't support prepared statements, but
+{- | Prepare a query. ClickHouse does not support prepared statements, but
  we'll do some client-side preprocessing here.
- prepare' :: ClickhouseHTTPEnv -> Text -> IO Statement
 -}
 prepare' ::
-  (ClickhouseClientSource client) =>
-  ClickhouseClientSettings client ->
-  ClickhouseConnectionSettings ->
+  forall client.
+  (ClickhouseClientAcquire client) =>
+  ClickhouseConnectionSettings client ->
   Text ->
   IO Statement
-prepare' settings connection sql = do
+prepare' settings sql = do
   let query = PreparedQuery . TLE.encodeUtf8 $ TL.fromStrict sql
   return
     Statement
       { stmtFinalize = return ()
       , stmtReset = return ()
-      , stmtExecute = execute' settings connection query
-      , stmtQuery = withStmt' settings connection query
+      , stmtExecute = execute' settings query
+      , stmtQuery = withStmt' settings query
       }
 
--- executeWithPersistValue :: ClickhouseHTTPEnv -> PreparedQuery -> [PersistValue] -> IO ByteString
-executeWithPersistValue ::
-  ( ClickhouseClient client
-  , QueryRenderer renderer
-  , Foldable f
-  , Functor f
-  ) =>
-  ClickhouseClientSettings client ->
-  ClickhouseConnectionSettings ->
-  RenderQueryType renderer ->
-  f PersistValue ->
-  IO ByteString
-executeWithPersistValue settings connection query vals = do
-  executePrepared settings connection query (persistValueToClickhouseType <$> vals)
-
 executeWithPersistValueSource ::
-  ( ClickhouseClientSource client
+  ( ClickhouseClientAcquire client
   , QueryRenderer renderer
   , Foldable f
   , Functor f
   , MonadIO m
   ) =>
-  ClickhouseClientSettings client ->
-  ClickhouseConnectionSettings ->
+  ClickhouseConnectionSettings client ->
   RenderQueryType renderer ->
   f PersistValue ->
   Acquire (ConduitM i ByteString m ())
-executeWithPersistValueSource settings connection query vals = do
-  executePreparedSource settings connection query (persistValueToClickhouseType <$> vals)
+executeWithPersistValueSource settings query vals = do
+  executePreparedAcquire settings query (persistValueToClickhouseType <$> vals)
 
 {- | Execute an statement that doesn't return any results.
- TODO: Float out runReq from here
- TODO: Somehow extract meaningful error code from ClickHouse response bytestring
+ TODO: Somehow extract meaningful error code from ClickHouse response string (likely impossible).
 -}
 
 {- execute' :: ClickhouseHTTPEnv -> PreparedQuery -> [PersistValue] -> IO Int64 -}
 execute' ::
-  ( ClickhouseClient client
-  , QueryRenderer renderer
+  forall renderer client f m.
+  ( QueryRenderer renderer
   , Foldable f
   , Functor f
+  , MonadIO m
+  , ClickhouseClientAcquire client
+  , m ~ IO
   ) =>
-  ClickhouseClientSettings client ->
-  ClickhouseConnectionSettings ->
+  ClickhouseConnectionSettings client ->
   RenderQueryType renderer ->
   f PersistValue ->
   IO Int64
-execute' settings connection query params =
-  0 <$ executeWithPersistValue settings connection query params
+execute' settings query params =
+  withAcquire (executeWithPersistValueSource @client @_ @_ @IO settings query params) (const $ pure 0)
 
 {- | Execute an statement that does return results.  The results
  are fetched all at once and stored into memory.
 -}
-
-{- withStmt' ::
-  MonadIO m =>
-  ClickhouseHTTPEnv ->
-  PreparedQuery ->
-  [PersistValue] ->
-  Acquire (ConduitM () [PersistValue] m ()) -}
 withStmt' ::
-  ( ClickhouseClientSource client
-  , QueryRenderer renderer
+  ( QueryRenderer renderer
   , Foldable f
   , Monad m
   , Functor f
+  , ClickhouseClientAcquire client
   , MonadIO m
   ) =>
-  ClickhouseClientSettings client ->
-  ClickhouseConnectionSettings ->
+  ClickhouseConnectionSettings client ->
   RenderQueryType renderer ->
   f PersistValue ->
   Acquire (ConduitT () [PersistValue] m ())
-withStmt' settings !connection !query !params = do
-  source <- executeWithPersistValueSource settings connection query params
+withStmt' !settings !query !params = do
+  source <- executeWithPersistValueSource settings query params
   pure $
     source
       .| decodeToClickhouseRowsC
       .| mapC V.toList
       .| mapCE clickhouseTypeToPersistValue
-
-insertSqlBackend' :: EntityDef -> [PersistValue] -> InsertSqlResult
-insertSqlBackend' ent vals =
-  case insertSqlValues' ent vals of
-    InsertClickhouseQuery sql vals' -> ISRManyKeys sql vals'
 
 {- withClickHouse ::
   (MonadUnliftIO m, MonadLoggerIO m, ClickhouseClient client) =>
@@ -156,7 +126,7 @@ runClickhouse settings env =
 {- openClickhouseConnectionSettings ::
   forall connectionType.
   (ClickhouseClient connectionType) =>
-  ClickhouseClientSettings connectionType ->
+  ClickhouseConnectionSettings connectionType ->
   ClickhouseConnectionSettings ->
   LogFunc ->
   IO SqlBackend
