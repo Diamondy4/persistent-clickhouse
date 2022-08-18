@@ -68,31 +68,30 @@ migrate' ::
   (Text -> IO Statement) ->
   EntityDef ->
   IO (Either [Text] [(Bool, Text)])
-migrate' env allDefs getter entity =
-  (fmap . fmap . fmap $ showAlterDb) . (`runReaderT` env) $ do
-    liveColumns <- getColumns getter entity newcols'
-    case partitionEithers liveColumns of
-      -- Live table columns successfully parsed
-      ([], old') -> do
-        exists' <-
-          if null liveColumns
-            then -- Check if table exists without columns
-              doesTableExist getter name
-            else -- Table exists
-              return True
-        return . Right $ migrationText exists' old'
-      (errs, _) -> return $ Left errs
+migrate' env allDefs getter entity = (`runReaderT` env) $ do
+  liveColumns <- getColumns getter entity newcols'
+  case partitionEithers liveColumns of
+    -- Live table columns successfully parsed
+    ([], old') -> do
+      exists' <-
+        if null liveColumns
+          then -- Check if table exists without columns
+            doesTableExist getter name
+          else -- Table exists
+            return True
+      return . Right $ showAlterDb <$> migrationText exists' old'
+    (errs, _) -> return $ Left errs
  where
   name = getEntityDBName entity
   newcols' = chMkColumns allDefs entity
   migrationText exists' old'
     | -- Create new tabe if not exists
       not exists' =
-      createText newcols
+        createText newcols
     | -- Modify existing table if exists
       otherwise =
-      let acs = getAlters allDefs entity newcols old'
-       in map (AlterColumn name) acs
+        let acs = getAlters allDefs entity newcols old'
+         in map (AlterColumn name) acs
    where
     newcols = filter (not . safeToRemove entity . cName) newcols'
   createText newcols = pure $ addTable newcols entity
@@ -104,7 +103,7 @@ doesTableExist ::
 doesTableExist getter (EntityNameDB name) = do
   dbScheme <- asks dbScheme
   let sql =
-        "SELECT count(*) FROM system.tables WHERE database = ? AND name = ?"
+        "SELECT count() FROM system.tables WHERE database = ? AND name = ?"
       vals = [PersistText dbScheme, PersistText name]
   stmt <- liftIO $ getter sql
   withAcquire (stmtQuery stmt vals) (\src -> runConduit $ src .| start)
